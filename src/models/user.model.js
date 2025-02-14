@@ -21,10 +21,13 @@ const userSchema = new mongoose.Schema({
     },
     avatar: {
         type: String,
+    },
+    avatarPublicId: {
+        type: String
     }
 }, { timestamps: true });
 
-const User = mongoose.model("User",userSchema);
+const User = mongoose.model("User", userSchema);
 
 export {
     User
