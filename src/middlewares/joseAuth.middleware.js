@@ -5,7 +5,7 @@ import {ApiError} from "../utils/ApiError.js";
 import User from "../models/user.model.js"
 
 
-const verifyToken = asyncHandler(async(req,res,next)=>{
+const verifyToken = asyncHandler(async(req,_,next)=>{
     const token = req.cookies?.accessToken || req.headers["Authorization"]?.replace("Bearer ","");
     if(!token){
         throw new ApiError(401,"Unauthorised request")
@@ -29,7 +29,7 @@ const verifyToken = asyncHandler(async(req,res,next)=>{
     }
 
     const decrypt = await jose.JWE.createDecrypt(encKey).decrypt(result.payload.toString());
-    const decryptedData = JSON.parse(decrypted.plaintext.toString());
+    const decryptedData = JSON.parse(decrypt.plaintext.toString());
 
     if(!decryptedData._id){
         throw new ApiError(401,"Data decryption failed")
@@ -39,7 +39,7 @@ const verifyToken = asyncHandler(async(req,res,next)=>{
     if(!user){
         throw new ApiError(404,"User doesn't exist with the given id")
     }
-    
+
     req.user = user
     next();
 })
