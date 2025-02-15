@@ -193,7 +193,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     }
     const user = await User.findById(userId);
     if(!user){
-        throw new ApiError(404,"User not exists"0)
+        throw new ApiError(404,"User does not exists")
     }
     const payload = {
         _id: user._id,
@@ -243,7 +243,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     if(Object.keys(allowedUpdates).length === 0){
         throw new ApiError(400, "At least 1 field is required to be updated")
     }
-    cons user = await User.findByIdAndUpdate(userId,allowedUpdates,{new:true});
+    const user = await User.findByIdAndUpdate(userId,allowedUpdates,{new:true});
 
     if(!user){
         throw new ApiError(404,"User doesn't exist")
