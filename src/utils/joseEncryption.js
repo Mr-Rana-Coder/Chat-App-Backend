@@ -1,5 +1,5 @@
 import jose from "node-jose";
-import { ApiError } from "./ApiError";
+import { ApiError } from "../utils/ApiError.js";
 
 const accessTokenGeneration = async (payload) => {
     try {
