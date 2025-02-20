@@ -16,7 +16,7 @@ import {
 import {
     uploadOnCloudinary,
     deleteFromCloudinary
-} from "../utils/Cloudinary.js";
+} from "../services/cloudinary.service.js";
 
 
 const registerUser = asyncHandler(async (req, res) => {
@@ -285,11 +285,18 @@ const deleteUser = asyncHandler(async(req,res)=>{
     if (!userId) {
         throw new ApiError(401, "User is not authenticated")
     }
-    const user = await User.findByIdAndDelete(userId);
+    const user = await User.findById(userId);
 
     if(!user){
         throw new ApiError(404,"User doesn't exist")
     }
+
+    const response = await deleteFromCloudinary(user.avatarPublicId);
+    if(!response){
+        throw new ApiError(500,"Avatar cannot be deleted")
+    }
+
+    await user.delete();
 
     const options ={
         httpOnly:true,
