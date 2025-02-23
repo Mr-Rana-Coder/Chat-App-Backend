@@ -1,7 +1,7 @@
 import express from "express";
 import {
     verifyAccessToken
-} from "../middlewares/joseAuth.middleware.js";
+} from "../middlewares/jwtAuth.middleware.js";
 import {
     createGroup,
     addMemberToGroup,

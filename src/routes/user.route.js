@@ -2,7 +2,7 @@ import express from "express";
 import {
     verifyAccessToken,
     verifyRefreshToken
-} from "../middlewares/joseAuth.middleware.js";
+} from "../middlewares/jwtAuth.middleware.js";
 import {upload} from "../middlewares/multer.middleware.js";
 import {
     registerUser,
@@ -18,7 +18,7 @@ import {
 
 const router = express.Router();
 
-router.route("/registerUser").post(upload.single("avatar"), registerUser);
+router.route("/register-user").post(upload.single("avatar"), registerUser);
 router.route("/login").post(loginUser);
 router.route("/refresh-token").post(verifyRefreshToken, refreshAccessToken);
 router.route("/current-user").get(verifyAccessToken, getCurrentUser);

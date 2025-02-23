@@ -1,4 +1,4 @@
-import { verifyAccessToken } from "../middlewares/joseAuth.middleware.js";
+import { verifyAccessToken } from "../middlewares/jwtAuth.middleware.js";
 import {upload} from "../middlewares/multer.middleware.js";
 import express from "express";
 import {
@@ -7,20 +7,22 @@ import {
     getChatOfMember,
     getChatOfGroup,
     deleteSingleChat,
-    deleteAllChats,
-    deleteMedia
+    deleteAllGroupChats,
+    deleteMedia,
+    deleteAllUserChats
 } from "../controllers/chat.controller.js";
 
 const router = express.Router();
 router.use(verifyAccessToken);
 
-router.route("/send-media-reciever/:recieverId").post(upload.array('mediaFiles', 10), sendMediaToReciever);
+router.route("/send-media-reciever/:receiverId").post(upload.array('mediaFiles', 10), sendMediaToReciever);
 router.route("/send-media-group/:groupId").post(upload.array('mediaFiles', 10), sendMediaToGroup);
 router.route("/get-chat-reciever/:receiverId").get(getChatOfMember);
 router.route("/get-chat-group/:groupId").get(getChatOfGroup);
 router.route("/delete-single-chat/:chatId").delete(deleteSingleChat)
-router.route("/delete-all-chats/:groupId/:receiverId").delete(deleteAllChats)
-router.route("/delete-media/:receiverId").delete(deleteMedia);
+router.route("/delete-media/:chatId").delete(deleteMedia);
+router.route("/delete-all-group-chats/:groupId").delete(deleteAllGroupChats)
+router.route("/delete-all-user-chats/:groupId").delete(deleteAllUserChats)
 
 export {
     router
