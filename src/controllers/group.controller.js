@@ -46,6 +46,10 @@ const addMemberToGroup = asyncHandler(async (req, res) => {
     if (!group) {
         throw new ApiError(404, "Group doesn't exist")
     }
+    if (group.members.some(member => member._id.toString() === memberId.toString())) {
+        console.log("Member exists in the group");
+        throw new ApiError(400, "Member already exists")
+    }
 
     group.members.push(memberId);
     await group.save();
@@ -71,7 +75,7 @@ const getGroupById = asyncHandler(async (req, res) => {
 
     return res
         .status(200)
-        .json(new ApiResponse(200, group, "Group fetched successfully"))
+        .json(new ApiResponse(200, group, "Group members fetched successfully"))
 })
 
 const removeMemberFromGroup = asyncHandler(async (req, res) => {
@@ -93,13 +97,17 @@ const removeMemberFromGroup = asyncHandler(async (req, res) => {
     if (!group) {
         throw new ApiError(404, "Group doesn't exist")
     }
+    if (group.members.some(member => member._id.toString() === memberId.toString())) {
+        group.members.pull(memberId);
+        await group.save();
 
-    group.members.pull(memberId);
-    await group.save();
+        return res
+            .status(200)
+            .json(new ApiResponse(200, group, "Member removed from group successfully"))
+    } else {
+        throw new ApiError(400, "Member doesn't exist in the group")
+    }
 
-    return res
-        .status(200)
-        .json(new ApiResponse(200, group, "Member removed from group successfully"))
 })
 
 const deleteGroup = asyncHandler(async (req, res) => {

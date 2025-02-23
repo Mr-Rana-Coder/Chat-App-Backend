@@ -6,7 +6,7 @@ import { User } from "../models/user.model.js";
 import {
     accessTokenGeneration,
     refreshTokenGeneration
-} from "../utils/joseEncryption.js";
+} from "../utils/jwtTokenGeneration.js";
 
 import {
     hashPassword,
@@ -60,7 +60,7 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Unable to register user")
     }
 
-    const userDetail = await User.findById(user._id).select("-password -refreshToken - avatarPublicId");
+    const userDetail = await User.findById(user._id).select("-password -refreshToken -avatarPublicId");
 
     return res
         .status(201)
@@ -81,30 +81,34 @@ const loginUser = asyncHandler(async (req, res) => {
         throw new ApiError(404, "User doesn't exists !")
     }
 
-    const isPasswordValid = await verifyPassword(password, user.password);
+    const isPasswordValid = await verifyPassword(user.password, password);
 
     if (!isPasswordValid) {
         throw new ApiError(401, "Password is invalid")
     }
 
-    const payload = {
+    const accessTokenPayload = {
         _id: user._id,
         fullName: user.fullName,
         email: user.email,
         userName: user.userName
     }
+    const refreshTokenPayload = {
+        _id: user._id
+    }
 
-    const accessToken = await accessTokenGeneration(payload);
-    const refreshToken = await refreshTokenGeneration(user._id);
+    const accessToken = await accessTokenGeneration(accessTokenPayload);
+    const refreshToken = await refreshTokenGeneration(refreshTokenPayload);
 
     user.refreshToken = refreshToken;
     await user.save();
 
-    const userDetail = await User.findById(userId).select("-password -refreshToken -avatarPublicId")
+    const userDetail = await User.findById(user._id).select("-password -refreshToken -avatarPublicId")
 
     const options = {
         httpOnly: true,
-        secure: true
+        secure: true,
+        maxAge: 60 * 60 * 1000
     }
 
     return res
@@ -125,7 +129,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
     }
     const userDetail = await User.findById(userId).select("-password -refreshToken -avatarPublicId")
 
-    if (!user) {
+    if (!userDetail) {
         throw new ApiError(404, "User doesn't exists")
     }
     return res
@@ -138,15 +142,15 @@ const logoutUser = asyncHandler(async (req, res) => {
     if (!userId) {
         throw new ApiError(401, "User is not authenticated")
     }
-    const user = await User.findByIdAndUpdate(userId, {
+    await User.findByIdAndUpdate(userId, {
         $unset: {
             refreshToken: 1
         }
     }, { new: true })
 
-    options = {
+    const options = {
         httpOnly: true,
-        secure: true
+        secure: true,
     }
 
     return res
@@ -171,7 +175,7 @@ const updatePassword = asyncHandler(async (req, res) => {
     if (!user) {
         throw new ApiError(404, "User doesn't exist")
     }
-    const isPasswordValid = await verifyPassword(oldPassword, user.password);
+    const isPasswordValid = await verifyPassword(user.password, oldPassword);
 
     if (!isPasswordValid) {
         throw new ApiError(400, "Old password is incorrect")
@@ -188,12 +192,12 @@ const updatePassword = asyncHandler(async (req, res) => {
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
     const userId = req.user?._id;
-    if(!userId){
-        throw new ApiError(401,"")
+    if (!userId) {
+        throw new ApiError(401, "")
     }
     const user = await User.findById(userId);
-    if(!user){
-        throw new ApiError(404,"User does not exists")
+    if (!user) {
+        throw new ApiError(404, "User does not exists")
     }
     const payload = {
         _id: user._id,
@@ -203,7 +207,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     }
 
     const accessToken = await accessTokenGeneration(payload);
-    const refreshToken = await refreshTokenGeneration(user._id);
+    const refreshToken = await refreshTokenGeneration({ _id: user._id });
 
     user.refreshToken = refreshToken;
     await user.save();
@@ -212,7 +216,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
     const options = {
         httpOnly: true,
-        secure: true
+        secure: true,
+        maxAge: 60 * 60 * 1000
     }
 
     return res
@@ -232,28 +237,28 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
         throw new ApiError(401, "User is not authenticated")
     }
 
-    const {userName,fullName} = req.body;
+    const { userName, fullName } = req.body;
     const allowedUpdates = {};
-    if(userName){
+    if (userName) {
         allowedUpdates.userName = userName;
     }
-    if(fullName){
+    if (fullName) {
         allowedUpdates.fullName = fullName;
     }
-    if(Object.keys(allowedUpdates).length === 0){
+    if (Object.keys(allowedUpdates).length === 0) {
         throw new ApiError(400, "At least 1 field is required to be updated")
     }
-    const user = await User.findByIdAndUpdate(userId,allowedUpdates,{new:true});
+    const user = await User.findByIdAndUpdate(userId, allowedUpdates, { new: true });
 
-    if(!user){
-        throw new ApiError(404,"User doesn't exist")
+    if (!user) {
+        throw new ApiError(404, "User doesn't exist")
     }
 
     const userDetail = await User.findById(userId).select("-password -refreshToken -avatarPublicId")
-    
+
     return res
-    .status(200)
-    .json(new ApiResponse(200,userDetail,"User details updated"))
+        .status(200)
+        .json(new ApiResponse(200, userDetail, "User details updated"))
 
 })
 
@@ -263,11 +268,13 @@ const updateAccountAvatar = asyncHandler(async (req, res) => {
         throw new ApiError(401, "User is not authenticated")
     }
     const user = await User.findById(userId);
-    if(!user){
-        throw new ApiError(404,"User with the given id doesn't exist")
+    if (!user) {
+        throw new ApiError(404, "User with the given id doesn't exist")
     }
     const path = req.file?.path;
     const response = await uploadOnCloudinary(path);
+
+    await deleteFromCloudinary(user.avatarPublicId, "image");
 
     user.avatar = response.url;
     user.avatarPublicId = response.public_id;
@@ -276,38 +283,35 @@ const updateAccountAvatar = asyncHandler(async (req, res) => {
     const userDetail = await User.findById(userId).select("-password -refreshToken -avatarPublicId")
 
     return res
-    .status(200)
-    .json(new ApiResponse(200,userDetail,"Avatar Updated successfully"))
+        .status(200)
+        .json(new ApiResponse(200, userDetail, "Avatar Updated successfully"))
 })
 
-const deleteUser = asyncHandler(async(req,res)=>{
+const deleteUser = asyncHandler(async (req, res) => {
     const userId = req.user?._id;
     if (!userId) {
         throw new ApiError(401, "User is not authenticated")
     }
     const user = await User.findById(userId);
 
-    if(!user){
-        throw new ApiError(404,"User doesn't exist")
+    if (!user) {
+        throw new ApiError(404, "User doesn't exist")
     }
 
-    const response = await deleteFromCloudinary(user.avatarPublicId);
-    if(!response){
-        throw new ApiError(500,"Avatar cannot be deleted")
-    }
+    await deleteFromCloudinary(user.avatarPublicId);
 
-    await user.delete();
+    await user.deleteOne();
 
-    const options ={
-        httpOnly:true,
-        secure:true
+    const options = {
+        httpOnly: true,
+        secure: true
     }
 
     return res
-    .status(200)
-    .clearCookie("accessToken",options)
-    .clearCookie("refreshToken",options)
-    .json(new ApiResponse(200,{},"User deleted successfully"))
+        .status(200)
+        .clearCookie("accessToken", options)
+        .clearCookie("refreshToken", options)
+        .json(new ApiResponse(200, {}, "User deleted successfully"))
 })
 export {
     registerUser,
