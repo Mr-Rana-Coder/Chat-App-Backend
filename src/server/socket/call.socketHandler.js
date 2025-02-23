@@ -25,9 +25,10 @@ const handleCallEvents = (socket, io) => {
 
     // Answer Call
     socket.on("answerCall", async ({ from, to, signalData }) => {
+        const senderSocketId = await redis.get(`user:${from}`)
         const recieverSocketId = await redis.get(`user:${to}`);
         if (recieverSocketId) {
-            io.to(recieverSocketId).emit("callAccepted", signalData);
+            io.to(senderSocketId).emit("callAccepted", signalData);
             const callDetails = await Call.findOne({
                 senderId: from,
                 receiverId: to
@@ -51,8 +52,10 @@ const handleCallEvents = (socket, io) => {
     // End Call
     socket.on("endCall", async ({ from, to }) => {
         const recieverSocketId = await redis.get(`user:${to}`);
+        const senderSocketId = await redis.get(`user:${from}`)
         if (recieverSocketId) {
             io.to(recieverSocketId).emit("callEnded");
+            io.to(senderSocketId).emit("callEnded")
             const callDetails = await Call.findOne({
                 senderId: from,
                 receiverId: to
