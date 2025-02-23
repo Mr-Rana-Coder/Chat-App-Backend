@@ -22,9 +22,9 @@ const chatSchema = new mongoose.Schema({
         default: false
     },
     media: {
-        videos: [{ url: String, public_id: String }],
-        audios: [{ url: String, public_id: String }],
-        images: [{ url: String, public_id: String }]
+        video: [{ url: String, publicId: String, _id: false }],
+        audio: [{ url: String, publicId: String, _id: false }],
+        image: [{ url: String, publicId: String, _id: false }]
     }
 }, { timestamps: true });
 
