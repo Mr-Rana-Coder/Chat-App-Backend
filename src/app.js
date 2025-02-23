@@ -7,6 +7,7 @@ import { setupSocket } from "./middlewares/setupSocket.middleware.js"
 import { reqLimiter } from "./middlewares/rateLimiter.middleware.js";
 import { redis } from "./server/redis/redis.server.js";
 
+
 const app = express();
 const server = http.createServer(app);
 const io = setupSocket(server)
@@ -48,11 +49,12 @@ import { router as callRouter } from "./routes/call.route.js";
 app.use("/api/v1/healthCheck", healthCheckRouter);
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/group", groupRouter);
-app.use("/api/v1/user", chatRouter);
+app.use("/api/v1/chat", chatRouter);
 app.use("/api/v1/call", callRouter);
 
-// app.use(errorHandler)
+app.use(errorHandler)
 
 export {
-    app
+    app,
+    server
 }

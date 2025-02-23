@@ -1,5 +1,5 @@
 import { connectToDatabase } from "./db/index.js";
-import { app } from "./app.js";
+import { server } from "./app.js";
 import dotenv from "dotenv";
 
 
@@ -9,7 +9,7 @@ dotenv.config({
 
 connectToDatabase()
     .then(() => {
-        app.listen(process.env.PORT || 8080, () => {
+        server.listen(process.env.PORT || 8080, () => {
             console.log(`The server is running on ${process.env.PORT} ... `);
         })
     })
